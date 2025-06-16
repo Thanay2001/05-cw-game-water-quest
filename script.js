@@ -42,7 +42,7 @@ function startGame() {
   if (gameActive) return; // Prevent starting a new game if one is already active
   gameActive = true;
   createGrid(); // Set up the game grid
-  spawnInterval = setInterval(spawnWaterCan, 1000); // Spawn water cans every second
+  spawnInterval = setInterval(spawnWaterCan, 2000); // Spawn water cans every 2 seconds (slower)
 }
 
 function endGame() {

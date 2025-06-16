@@ -1,23 +1,176 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width">
-  <title>Water Quest</title>
-  <link href="style.css" rel="stylesheet" type="text/css" />
+  <meta charset="UTF-8" />
+  <title>Drip Drop</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #cceeff;
+    }
+    canvas {
+      display: block;
+    }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Water Quest</h1>
-    <p class="game-instructions">Collect 20 items to complete the game!</p>
-    <div class="stats">
-      <p>Cans Collected: <span id="current-cans">0</span></p>
-      <p>Time Left: <span id="timer">30</span>s</p>
-    </div>
-    <div id="achievements" class="achievement"></div>
-    <div class="game-grid"></div>
-    <button id="start-game">Start Game</button>
-  </div>
-  <script src="script.js"></script>
+<canvas id="gameCanvas"></canvas>
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let gravity = 0.3;
+let flapPower = -8;
+let moveSpeed = 6;
+let canFlap = true;
+let gameOver = false;
+
+let drop = {
+  x: canvas.width / 4,
+  y: canvas.height / 2,
+  radius: 20,
+  dy: 0,
+};
+
+let keys = {
+  left: false,
+  right: false,
+};
+
+document.addEventListener("keydown", e => {
+  if ((e.code === "Space" || e.button === 0) && canFlap && !gameOver) {
+    drop.dy = flapPower;
+    canFlap = false;
+  }
+  if (e.code === "ArrowLeft" || e.code === "KeyA") keys.left = true;
+  if (e.code === "ArrowRight" || e.code === "KeyD") keys.right = true;
+});
+
+document.addEventListener("keyup", e => {
+  if (e.code === "Space") canFlap = true;
+  if (e.code === "ArrowLeft" || e.code === "KeyA") keys.left = false;
+  if (e.code === "ArrowRight" || e.code === "KeyD") keys.right = false;
+});
+
+document.addEventListener("mousedown", () => {
+  if (canFlap && !gameOver) {
+    drop.dy = flapPower;
+    canFlap = false;
+  }
+});
+
+document.addEventListener("mouseup", () => {
+  canFlap = true;
+});
+
+document.addEventListener("click", () => {
+  if (gameOver) document.location.reload();
+});
+
+document.addEventListener("keydown", () => {
+  if (gameOver) document.location.reload();
+});
+
+const pipes = [];
+const pipeGap = 160;
+let pipeTimer = 0;
+const pipeInterval = 90;
+
+function spawnPipe() {
+  let height = Math.random() * (canvas.height - pipeGap - 200) + 100;
+  pipes.push({ x: canvas.width, height: height, dirty: Math.random() < 0.3 });
+}
+
+function drawDrop() {
+  ctx.fillStyle = "#00aaff";
+  ctx.beginPath();
+  ctx.arc(drop.x, drop.y, drop.radius, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawPipes() {
+  ctx.fillStyle = "#555";
+  pipes.forEach(pipe => {
+    ctx.fillRect(pipe.x, 0, 60, pipe.height);
+    ctx.fillRect(pipe.x, pipe.height + pipeGap, 60, canvas.height);
+
+    if (pipe.dirty) {
+      ctx.fillStyle = "#333";
+      ctx.beginPath();
+      ctx.arc(pipe.x + 30, pipe.height + pipeGap, 20, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#555";
+    }
+  });
+}
+
+function showGameOverMessage(msg) {
+  ctx.fillStyle = "rgba(0,0,0,0.5)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "white";
+  ctx.font = "bold 36px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(msg, canvas.width / 2, canvas.height / 2 - 20);
+  ctx.font = "24px sans-serif";
+  ctx.fillText("Click or press any key to restart", canvas.width / 2, canvas.height / 2 + 30);
+}
+
+function triggerGameOver(reason) {
+  gameOver = true;
+  showGameOverMessage(reason);
+}
+
+function update() {
+  if (gameOver) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  drop.dy += gravity;
+  drop.y += drop.dy;
+  if (keys.left) drop.x -= moveSpeed;
+  if (keys.right) drop.x += moveSpeed;
+
+  drawDrop();
+
+  pipeTimer++;
+  if (pipeTimer > pipeInterval) {
+    spawnPipe();
+    pipeTimer = 0;
+  }
+
+  pipes.forEach(pipe => {
+    pipe.x -= 4;
+
+    if (
+      drop.x + drop.radius > pipe.x &&
+      drop.x - drop.radius < pipe.x + 60 &&
+      (drop.y - drop.radius < pipe.height || drop.y + drop.radius > pipe.height + pipeGap)
+    ) {
+      triggerGameOver("You got polluted!");
+    }
+
+    if (pipe.dirty &&
+      drop.x + drop.radius > pipe.x + 10 &&
+      drop.x - drop.radius < pipe.x + 50 &&
+      drop.y + drop.radius > pipe.height + pipeGap - 10 &&
+      drop.y - drop.radius < pipe.height + pipeGap + 30) {
+      triggerGameOver("You touched dirty water!");
+    }
+  });
+
+  if (drop.y + drop.radius > canvas.height || drop.y - drop.radius < 0) {
+    triggerGameOver("You hit the ground!");
+  }
+
+  drawPipes();
+
+  requestAnimationFrame(update);
+}
+
+update();
+</script>
 </body>
 </html>
