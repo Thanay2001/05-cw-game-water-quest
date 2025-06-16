@@ -9,13 +9,51 @@
       padding: 0;
       overflow: hidden;
       background: #cceeff;
+      font-family: sans-serif;
     }
     canvas {
       display: block;
     }
+    #scoreDisplay, #resetButton, #logo {
+      position: absolute;
+      z-index: 10;
+      font-size: 24px;
+      padding: 10px;
+    }
+    #scoreDisplay {
+      top: 10px;
+      left: 10px;
+      background: rgba(255,255,255,0.8);
+      border-radius: 8px;
+    }
+    #resetButton {
+      top: 10px;
+      right: 10px;
+      background: #ffc600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    #logo {
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    @media (max-width: 600px) {
+      #scoreDisplay, #resetButton {
+        font-size: 18px;
+        padding: 8px;
+      }
+      #logo {
+        width: 120px;
+      }
+    }
   </style>
 </head>
 <body>
+<div id="scoreDisplay">Score: 0</div>
+<button id="resetButton">Reset</button>
+<img id="logo" src="img/water-can-transparent.png" alt="charity: water" width="150">
 <canvas id="gameCanvas"></canvas>
 <script>
 const canvas = document.getElementById("gameCanvas");
@@ -28,6 +66,9 @@ let flapPower = -8;
 let moveSpeed = 6;
 let canFlap = true;
 let gameOver = false;
+let score = 0;
+let highScore = localStorage.getItem("highScore") || 0;
+let newHighScore = false;
 
 let drop = {
   x: canvas.width / 4,
@@ -39,6 +80,10 @@ let drop = {
 let keys = {
   left: false,
   right: false,
+};
+
+document.getElementById("resetButton").onclick = () => {
+  document.location.reload();
 };
 
 document.addEventListener("keydown", e => {
@@ -82,7 +127,7 @@ const pipeInterval = 90;
 
 function spawnPipe() {
   let height = Math.random() * (canvas.height - pipeGap - 200) + 100;
-  pipes.push({ x: canvas.width, height: height, dirty: Math.random() < 0.3 });
+  pipes.push({ x: canvas.width, height: height, dirty: Math.random() < 0.3, scored: false });
 }
 
 function drawDrop() {
@@ -114,13 +159,25 @@ function showGameOverMessage(msg) {
   ctx.fillStyle = "white";
   ctx.font = "bold 36px sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText(msg, canvas.width / 2, canvas.height / 2 - 20);
+  ctx.fillText(msg, canvas.width / 2, canvas.height / 2 - 60);
+  if (newHighScore) {
+    ctx.fillStyle = "#ffc600";
+    ctx.fillText("New High Score!", canvas.width / 2, canvas.height / 2 - 20);
+  }
+  ctx.fillStyle = "white";
   ctx.font = "24px sans-serif";
-  ctx.fillText("Click or press any key to restart", canvas.width / 2, canvas.height / 2 + 30);
+  ctx.fillText(`Score: ${score}`, canvas.width / 2, canvas.height / 2 + 10);
+  ctx.fillText(`High Score: ${highScore}`, canvas.width / 2, canvas.height / 2 + 40);
+  ctx.fillText("Click or press any key to restart", canvas.width / 2, canvas.height / 2 + 80);
 }
 
 function triggerGameOver(reason) {
   gameOver = true;
+  if (score > highScore) {
+    highScore = score;
+    newHighScore = true;
+    localStorage.setItem("highScore", highScore);
+  }
   showGameOverMessage(reason);
 }
 
@@ -143,6 +200,12 @@ function update() {
 
   pipes.forEach(pipe => {
     pipe.x -= 4;
+
+    if (!pipe.scored && pipe.x + 60 < drop.x - drop.radius) {
+      score++;
+      pipe.scored = true;
+      document.getElementById("scoreDisplay").innerText = `Score: ${score}`;
+    }
 
     if (
       drop.x + drop.radius > pipe.x &&
