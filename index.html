@@ -53,7 +53,10 @@
 <body>
 <div id="scoreDisplay">Score: 0</div>
 <button id="resetButton">Reset</button>
-<img id="logo" src="img/water-can-transparent.png" alt="charity: water" width="150">
+<img id="logo" src="img/cw_logo.png" alt="charity: water" width="150">
+<img id="pipeImg" src="img/pipe.png" style="display:none">
+<img id="dropImg" src="img/waterdrop.png" style="display:none">
+<img id="bgImg" src="img/Background.png" style="display:none">
 <canvas id="gameCanvas"></canvas>
 <script>
 const canvas = document.getElementById("gameCanvas");
@@ -69,6 +72,10 @@ let gameOver = false;
 let score = 0;
 let highScore = localStorage.getItem("highScore") || 0;
 let newHighScore = false;
+
+const pipeImg = document.getElementById("pipeImg");
+const dropImg = document.getElementById("dropImg");
+const bgImg = document.getElementById("bgImg");
 
 let drop = {
   x: canvas.width / 4,
@@ -130,26 +137,21 @@ function spawnPipe() {
   pipes.push({ x: canvas.width, height: height, dirty: Math.random() < 0.3, scored: false });
 }
 
+function drawBackground() {
+  ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+}
+
 function drawDrop() {
-  ctx.fillStyle = "#00aaff";
-  ctx.beginPath();
-  ctx.arc(drop.x, drop.y, drop.radius, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.drawImage(dropImg, drop.x - drop.radius, drop.y - drop.radius, drop.radius * 2, drop.radius * 2);
 }
 
 function drawPipes() {
-  ctx.fillStyle = "#555";
   pipes.forEach(pipe => {
-    ctx.fillRect(pipe.x, 0, 60, pipe.height);
-    ctx.fillRect(pipe.x, pipe.height + pipeGap, 60, canvas.height);
-
-    if (pipe.dirty) {
-      ctx.fillStyle = "#333";
-      ctx.beginPath();
-      ctx.arc(pipe.x + 30, pipe.height + pipeGap, 20, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#555";
-    }
+    ctx.drawImage(pipeImg, pipe.x, pipe.height + pipeGap, 60, canvas.height);
+    ctx.save();
+    ctx.scale(1, -1);
+    ctx.drawImage(pipeImg, pipe.x, -pipe.height, 60, canvas.height);
+    ctx.restore();
   });
 }
 
@@ -183,6 +185,7 @@ function triggerGameOver(reason) {
 
 function update() {
   if (gameOver) return;
+  drawBackground();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   drop.dy += gravity;
@@ -190,6 +193,7 @@ function update() {
   if (keys.left) drop.x -= moveSpeed;
   if (keys.right) drop.x += moveSpeed;
 
+  drawBackground();
   drawDrop();
 
   pipeTimer++;
@@ -224,11 +228,11 @@ function update() {
     }
   });
 
+  drawPipes();
+
   if (drop.y + drop.radius > canvas.height || drop.y - drop.radius < 0) {
     triggerGameOver("You hit the ground!");
   }
-
-  drawPipes();
 
   requestAnimationFrame(update);
 }
